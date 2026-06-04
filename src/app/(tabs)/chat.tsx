@@ -1,36 +1,36 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const conversations = [
   {
     id: "1",
-    name: "Chidi Okeke",
+    name: "Oyedele Precious",
     lastMessage: "Is the iPhone still available?",
     time: "2:30 PM",
     unread: 2,
-    emoji: "👨🏿",
+    emoji: "👩🏿",
     product: "Used iPhone 12",
   },
   {
     id: "2",
-    name: "Amaka Obi",
+    name: "Oyeniran Temidayo",
     lastMessage: "Can you do ₦4,500 for the textbook?",
     time: "1:15 PM",
     unread: 0,
-    emoji: "👩🏿",
+    emoji: "👨🏿 ",
     product: "Calculus Textbook",
   },
   {
     id: "3",
-    name: "Tunde Bello",
+    name: "Babatunde Roland",
     lastMessage: "I'll pick it up tomorrow morning",
     time: "11:00 AM",
     unread: 1,
@@ -39,16 +39,16 @@ const conversations = [
   },
   {
     id: "4",
-    name: "Ngozi Adeyemi",
+    name: "Sowande Jesutofunmi",
     lastMessage: "Thanks! Transaction was smooth 👍",
     time: "Yesterday",
     unread: 0,
-    emoji: "👩🏿",
+    emoji: "👨🏿",
     product: "Reading Lamp",
   },
   {
     id: "5",
-    name: "Emeka Nwosu",
+    name: "Oyeniran Samuel",
     lastMessage: "What's the condition of the laptop stand?",
     time: "Yesterday",
     unread: 0,

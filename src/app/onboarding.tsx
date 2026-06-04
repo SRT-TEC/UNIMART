@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-const steps = [
+const onboardingData = [
   {
     emoji: "🛍️",
     title: "Campus Shopping Made Simple",
@@ -20,59 +20,45 @@ const steps = [
   },
 ];
 
-export default function Onboarding() {
-  const [currentStep, setCurrentStep] = useState(0);
+export default function OnboardingScreen() {
+  const [step, setStep] = useState(0);
   const router = useRouter();
 
-  const isLastStep = currentStep === steps.length - 1;
-  const { emoji, title, subtitle } = steps[currentStep];
+  const isLast = step === onboardingData.length - 1;
+  const current = onboardingData[step];
 
-  const handleContinue = () => {
-    if (isLastStep) {
+  const nextStep = () => {
+    if (isLast) {
       router.push("/login");
     } else {
-      setCurrentStep((prev) => prev + 1);
+      setStep(step + 1);
     }
   };
 
-  const handleSkip = () => {
-    router.push("/login");
-  };
+  const skip = () => router.push("/login");
 
   return (
-    <View style={styles.container}>
+    <View style={styles.wrapper}>
 
-      {/* Skip Button */}
-      <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+      <TouchableOpacity style={styles.skipBtn} onPress={skip}>
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
 
-      {/* Image Box */}
-      <View style={styles.imageBox}>
-        <Text style={styles.imageText}>{emoji}</Text>
+      <View style={styles.imgBox}>
+        <Text style={styles.emoji}>{current.emoji}</Text>
       </View>
 
-      {/* Title */}
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title}>{current.title}</Text>
+      <Text style={styles.subtitle}>{current.subtitle}</Text>
 
-      {/* Subtitle */}
-      <Text style={styles.subtitle}>{subtitle}</Text>
-
-      {/* Dots */}
-      <View style={styles.dotsContainer}>
-        {steps.map((_, index) => (
-          <View
-            key={index}
-            style={[styles.dot, index === currentStep && styles.activeDot]}
-          />
+      <View style={styles.dots}>
+        {onboardingData.map((_, i) => (
+          <View key={i} style={[styles.dot, i === step && styles.activeDot]} />
         ))}
       </View>
 
-      {/* Continue / Get Started Button */}
-      <TouchableOpacity style={styles.button} onPress={handleContinue}>
-        <Text style={styles.buttonText}>
-          {isLastStep ? "Get Started" : "Continue"}
-        </Text>
+      <TouchableOpacity style={styles.btn} onPress={nextStep}>
+        <Text style={styles.btnText}>{isLast ? "Get Started" : "Continue"}</Text>
       </TouchableOpacity>
 
     </View>
@@ -80,7 +66,7 @@ export default function Onboarding() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     flex: 1,
     backgroundColor: "white",
     alignItems: "center",
@@ -88,7 +74,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 
-  skipButton: {
+  skipBtn: {
     position: "absolute",
     top: 56,
     right: 24,
@@ -100,7 +86,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  imageBox: {
+  imgBox: {
     width: 180,
     height: 180,
     borderRadius: 20,
@@ -110,7 +96,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
 
-  imageText: {
+  emoji: {
     fontSize: 70,
   },
 
@@ -131,7 +117,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  dotsContainer: {
+  dots: {
     flexDirection: "row",
     marginTop: 32,
   },
@@ -150,7 +136,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
 
-  button: {
+  btn: {
     marginTop: 40,
     backgroundColor: "#1B4FD8",
     paddingVertical: 14,
@@ -158,7 +144,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
 
-  buttonText: {
+  btnText: {
     color: "white",
     fontSize: 16,
     fontWeight: "bold",

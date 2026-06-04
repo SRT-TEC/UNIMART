@@ -2,14 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const categories = [
@@ -17,7 +17,7 @@ const categories = [
   { id: "2", name: "Textbooks", icon: "📚" },
   { id: "3", name: "Fashion", icon: "👗" },
   { id: "4", name: "Gadgets", icon: "💻" },
-  
+  { id: "5", name: "Hostel", icon: "🛏️" },
   { id: "6", name: "Services", icon: "🔧" },
 ];
 
@@ -28,10 +28,43 @@ export default function AddProduct() {
   const [location, setLocation] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [condition, setCondition] = useState("");
+  const [errors, setErrors] = useState<{
+    productName?: string;
+    category?: string;
+    price?: string;
+    condition?: string;
+    description?: string;
+    location?: string;
+  }>({});
   const router = useRouter();
 
+  const validate = () => {
+    const newErrors: {
+      productName?: string;
+      category?: string;
+      price?: string;
+      condition?: string;
+      description?: string;
+      location?: string;
+    } = {};
+
+    if (!productName.trim()) newErrors.productName = "Product name is required";
+    if (!selectedCategory) newErrors.category = "Please select a category";
+    if (!price.trim()) {
+      newErrors.price = "Price is required";
+    } else if (isNaN(Number(price)) || Number(price) <= 0) {
+      newErrors.price = "Enter a valid price";
+    }
+    if (!condition) newErrors.condition = "Please select a condition";
+    if (!description.trim()) newErrors.description = "Description is required";
+    if (!location.trim()) newErrors.location = "Location is required";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = () => {
-    // TODO: save product to database
+    if (!validate()) return;
     router.push("/(tabs)/feed");
   };
 
@@ -62,12 +95,18 @@ export default function AddProduct() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Product Name</Text>
           <TextInput
-            style={styles.input}
-            placeholder="e.g.IPhone 12"
+            style={[styles.input, errors.productName ? styles.inputError : null]}
+            placeholder="e.g. Used iPhone 12"
             placeholderTextColor="#94A3B8"
             value={productName}
-            onChangeText={setProductName}
+            onChangeText={(text) => {
+              setProductName(text);
+              if (errors.productName) setErrors((e) => ({ ...e, productName: undefined }));
+            }}
           />
+          {errors.productName && (
+            <Text style={styles.errorText}>{errors.productName}</Text>
+          )}
         </View>
 
         {/* Category */}
@@ -85,7 +124,10 @@ export default function AddProduct() {
                   styles.categoryChip,
                   selectedCategory === cat.name && styles.categoryChipActive,
                 ]}
-                onPress={() => setSelectedCategory(cat.name)}
+                onPress={() => {
+                  setSelectedCategory(cat.name);
+                  if (errors.category) setErrors((e) => ({ ...e, category: undefined }));
+                }}
               >
                 <Text style={styles.categoryIcon}>{cat.icon}</Text>
                 <Text
@@ -99,19 +141,28 @@ export default function AddProduct() {
               </TouchableOpacity>
             ))}
           </ScrollView>
+          {errors.category && (
+            <Text style={styles.errorText}>{errors.category}</Text>
+          )}
         </View>
 
         {/* Price */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Price (₦)</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.price ? styles.inputError : null]}
             placeholder="e.g. 15000"
             placeholderTextColor="#94A3B8"
             keyboardType="numeric"
             value={price}
-            onChangeText={setPrice}
+            onChangeText={(text) => {
+              setPrice(text);
+              if (errors.price) setErrors((e) => ({ ...e, price: undefined }));
+            }}
           />
+          {errors.price && (
+            <Text style={styles.errorText}>{errors.price}</Text>
+          )}
         </View>
 
         {/* Condition */}
@@ -124,8 +175,12 @@ export default function AddProduct() {
                 style={[
                   styles.conditionChip,
                   condition === c && styles.conditionChipActive,
+                  errors.condition ? styles.inputError : null,
                 ]}
-                onPress={() => setCondition(c)}
+                onPress={() => {
+                  setCondition(c);
+                  if (errors.condition) setErrors((e) => ({ ...e, condition: undefined }));
+                }}
               >
                 <Text
                   style={[
@@ -138,35 +193,50 @@ export default function AddProduct() {
               </TouchableOpacity>
             ))}
           </View>
+          {errors.condition && (
+            <Text style={styles.errorText}>{errors.condition}</Text>
+          )}
         </View>
 
         {/* Description */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Description</Text>
           <TextInput
-            style={styles.textArea}
+            style={[styles.textArea, errors.description ? styles.inputError : null]}
             placeholder="Describe your item — condition, specs, reason for selling..."
             placeholderTextColor="#94A3B8"
             multiline
             numberOfLines={4}
             value={description}
-            onChangeText={setDescription}
+            onChangeText={(text) => {
+              setDescription(text);
+              if (errors.description) setErrors((e) => ({ ...e, description: undefined }));
+            }}
           />
+          {errors.description && (
+            <Text style={styles.errorText}>{errors.description}</Text>
+          )}
         </View>
 
         {/* Location */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Location on Campus</Text>
-          <View style={styles.locationInput}>
+          <View style={[styles.locationInput, errors.location ? styles.inputError : null]}>
             <Ionicons name="location-outline" size={18} color="#94A3B8" />
             <TextInput
               style={styles.locationTextInput}
               placeholder="e.g. Mozambique Hall, Block C"
               placeholderTextColor="#94A3B8"
               value={location}
-              onChangeText={setLocation}
+              onChangeText={(text) => {
+                setLocation(text);
+                if (errors.location) setErrors((e) => ({ ...e, location: undefined }));
+              }}
             />
           </View>
+          {errors.location && (
+            <Text style={styles.errorText}>{errors.location}</Text>
+          )}
         </View>
 
         {/* Submit Button */}
@@ -250,6 +320,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     color: "#0F172A",
+  },
+
+  inputError: {
+    borderColor: "#EF4444",
+  },
+
+  errorText: {
+    fontSize: 12,
+    color: "#EF4444",
+    marginTop: 4,
+    marginLeft: 4,
   },
 
   categoryList: {

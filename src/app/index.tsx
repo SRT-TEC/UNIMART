@@ -1,41 +1,35 @@
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function Home() {
+export default function SplashScreen() {
   const router = useRouter();
 
+  const goToOnboarding = () => {
+    router.push("/onboarding");
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={styles.wrapper}>
+      <View style={styles.circle1} />
+      <View style={styles.circle2} />
 
-      {/* Decorative background circles */}
-      <View style={styles.bgCircle1} />
-      <View style={styles.bgCircle2} />
-
-      {/* Logo Circle */}
-      <View style={styles.logoContainer}>
-        <Text style={styles.logo}>UM</Text>
+      <View style={styles.logoBox}>
+        <Text style={styles.logoText}>UM</Text>
       </View>
 
-      {/* App Name */}
-      <Text style={styles.title}>UniMart</Text>
+      <Text style={styles.appName}>UniMart</Text>
+      <Text style={styles.tagline1}>Welcome to UniMart</Text>
+      <Text style={styles.tagline2}>Buy, Sell & Swap on your campus</Text>
 
-      {/* Subtitle */}
-      <Text style={styles.subtitle}>Welcome to UniMart</Text>
-
-      {/* Tagline */}
-      <Text style={styles.tagline}>Buy, Sell & Swap on your campus</Text>
-
-      {/* Button */}
-      <TouchableOpacity style={styles.button} onPress={() => router.push("/onboarding")}>
-        <Text style={styles.buttonText}>Get Started</Text>
+      <TouchableOpacity style={styles.btn} onPress={goToOnboarding}>
+        <Text style={styles.btnText}>Get Started</Text>
       </TouchableOpacity>
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     flex: 1,
     backgroundColor: "#1B4FD8",
     justifyContent: "center",
@@ -43,7 +37,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 
-  bgCircle1: {
+  circle1: {
     position: "absolute",
     width: 300,
     height: 300,
@@ -53,7 +47,7 @@ const styles = StyleSheet.create({
     right: -60,
   },
 
-  bgCircle2: {
+  circle2: {
     position: "absolute",
     width: 250,
     height: 250,
@@ -63,7 +57,7 @@ const styles = StyleSheet.create({
     left: -60,
   },
 
-  logoContainer: {
+  logoBox: {
     width: 110,
     height: 110,
     borderRadius: 55,
@@ -75,27 +69,27 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.3)",
   },
 
-  logo: {
+  logoText: {
     fontSize: 38,
     fontWeight: "bold",
     color: "#1B4FD8",
   },
 
-  title: {
+  appName: {
     fontSize: 30,
     fontWeight: "bold",
     color: "white",
     letterSpacing: 0.5,
   },
 
-  subtitle: {
+  tagline1: {
     fontSize: 18,
     color: "white",
     marginTop: 8,
     fontWeight: "500",
   },
 
-  tagline: {
+  tagline2: {
     fontSize: 14,
     color: "#BFCFFF",
     marginTop: 8,
@@ -103,14 +97,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  button: {
+  btn: {
     backgroundColor: "white",
     paddingVertical: 14,
     paddingHorizontal: 48,
     borderRadius: 30,
   },
 
-  buttonText: {
+  btnText: {
     color: "#1B4FD8",
     fontSize: 16,
     fontWeight: "bold",
