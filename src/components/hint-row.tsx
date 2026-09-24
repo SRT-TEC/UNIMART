@@ -5,6 +5,7 @@ import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { Spacing } from '@/constants/theme';
+import React from 'react';
 
 type HintRowProps = {
   title?: string;

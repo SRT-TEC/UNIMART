@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { useCallback, useRef, useState } from "react";
+import React from "react";
+import { useCallback, useState } from "react";
 import {
     FlatList,
+  Modal,
     ScrollView,
     StyleSheet,
     Text,
@@ -36,7 +37,6 @@ export default function Feed() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const bottomSheetRef = useRef<BottomSheet>(null);
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -47,11 +47,10 @@ export default function Feed() {
 
   const handleProductPress = useCallback((product: any) => {
     setSelectedProduct(product);
-    bottomSheetRef.current?.expand();
   }, []);
 
   const handleCloseSheet = useCallback(() => {
-    bottomSheetRef.current?.close();
+    setSelectedProduct(null);
   }, []);
 
   return (
@@ -152,15 +151,14 @@ export default function Feed() {
       />
 
       {/* Product Detail Bottom Sheet */}
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={-1}
-        snapPoints={["70%"]}
-        enablePanDownToClose
-        backgroundStyle={styles.sheetBackground}
-        handleIndicatorStyle={styles.sheetIndicator}
+      <Modal
+        visible={selectedProduct !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCloseSheet}
       >
-        <BottomSheetView style={styles.sheetContent}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.sheetContent}>
           {selectedProduct && (
             <>
               {/* Close Button */}
@@ -214,8 +212,9 @@ export default function Feed() {
               </View>
             </>
           )}
-        </BottomSheetView>
-      </BottomSheet>
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
@@ -418,6 +417,12 @@ const styles = StyleSheet.create({
   sheetContent: {
     flex: 1,
     padding: 20,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
   },
 
   sheetClose: {
