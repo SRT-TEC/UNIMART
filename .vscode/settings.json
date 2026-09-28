@@ -1,4 +1,7 @@
 {
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/backend/UNIMART"
+  ],
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
