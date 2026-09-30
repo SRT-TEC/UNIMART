@@ -1,17 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import { registerUser } from "../services/api";
 
 export default function SignupScreen() {
   const [firstName, setFirstName] = useState("");
@@ -28,6 +28,9 @@ export default function SignupScreen() {
     password?: string;
     confirmPassword?: string;
   }>({});
+  const [requestError, setRequestError] = useState("");
+  const [registrationMessage, setRegistrationMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   const validate = () => {
@@ -41,8 +44,8 @@ export default function SignupScreen() {
     }
     if (!password.trim()) {
       e.password = "Password is required";
-    } else if (password.length < 6) {
-      e.password = "Password must be at least 6 characters";
+    } else if (password.length < 8) {
+      e.password = "Password must be at least 8 characters";
     }
     if (!confirmPassword.trim()) {
       e.confirmPassword = "Please confirm your password";
@@ -53,9 +56,30 @@ export default function SignupScreen() {
     return Object.keys(e).length === 0;
   };
 
-  const onSignup = () => {
+  const onSignup = async () => {
     if (!validate()) return;
-    router.push("/(tabs)/feed");
+
+    setRequestError("");
+    setRegistrationMessage("");
+    setIsSubmitting(true);
+    try {
+      await registerUser({
+        full_name: `${firstName.trim()} ${lastName.trim()}`,
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      setRegistrationMessage(
+        "Account created. Verify your email before logging in.",
+      );
+    } catch (error) {
+      setRequestError(
+        error instanceof Error
+          ? error.message
+          : "Unable to create your account. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const goToLogin = () => router.push("/login");
@@ -191,8 +215,15 @@ export default function SignupScreen() {
             <Text style={styles.termsLink}>Privacy Policy</Text>.
           </Text>
 
-          <TouchableOpacity style={styles.btn} onPress={onSignup}>
-            <Text style={styles.btnText}>Create Account</Text>
+          {requestError ? <Text style={styles.requestError}>{requestError}</Text> : null}
+          {registrationMessage ? (
+            <Text style={styles.registrationMessage}>{registrationMessage}</Text>
+          ) : null}
+
+          <TouchableOpacity style={styles.btn} onPress={onSignup} disabled={isSubmitting}>
+            <Text style={styles.btnText}>
+              {isSubmitting ? "Creating account..." : "Create Account"}
+            </Text>
           </TouchableOpacity>
 
           <View style={styles.divider}>
@@ -234,6 +265,8 @@ const styles = StyleSheet.create({
   },
   inputErr: { borderColor: "#EF4444" },
   errText: { fontSize: 12, color: "#EF4444", marginTop: 4, marginLeft: 4 },
+  requestError: { fontSize: 13, color: "#DC2626", marginBottom: 12, textAlign: "center" },
+  registrationMessage: { fontSize: 13, color: "#15803D", marginBottom: 12, textAlign: "center" },
   passBox: {
     flexDirection: "row", alignItems: "center",
     borderWidth: 1, borderColor: "#E2E8F0",

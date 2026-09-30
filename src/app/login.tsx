@@ -1,22 +1,24 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import { loginUser } from "../services/api";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [requestError, setRequestError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   const validate = () => {
@@ -35,9 +37,21 @@ export default function LoginScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const onLogin = () => {
+  const onLogin = async () => {
     if (!validate()) return;
-    router.push("/(tabs)/feed");
+
+    setRequestError("");
+    setIsSubmitting(true);
+    try {
+      await loginUser(email.trim().toLowerCase(), password);
+      router.replace("/(tabs)/feed");
+    } catch (error) {
+      setRequestError(
+        error instanceof Error ? error.message : "Unable to log in. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const goToSignup = () => router.push("/signup");
@@ -105,8 +119,10 @@ export default function LoginScreen() {
           <Text style={styles.forgotText}>Forgot password?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.btn} onPress={onLogin}>
-          <Text style={styles.btnText}>Login</Text>
+        {requestError ? <Text style={styles.requestError}>{requestError}</Text> : null}
+
+        <TouchableOpacity style={styles.btn} onPress={onLogin} disabled={isSubmitting}>
+          <Text style={styles.btnText}>{isSubmitting ? "Logging in..." : "Login"}</Text>
         </TouchableOpacity>
 
         <View style={styles.divider}>
@@ -188,6 +204,12 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     marginTop: 4,
     marginLeft: 4,
+  },
+  requestError: {
+    fontSize: 13,
+    color: "#DC2626",
+    marginBottom: 12,
+    textAlign: "center",
   },
   passBox: {
     flexDirection: "row",
