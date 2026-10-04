@@ -66,7 +66,7 @@ export default function AddProduct() {
 
   const handleSubmit = () => {
     if (!validate()) return;
-    router.push("/(tabs)/feed");
+    router.push("/(tabs)/feed" as any);
   };
 
   return (

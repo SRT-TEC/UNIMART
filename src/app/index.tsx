@@ -6,7 +6,7 @@ export default function SplashScreen() {
   const router = useRouter();
 
   const goToOnboarding = () => {
-    router.push("/onboarding");
+    router.push("/onboarding" as any);
   };
 
   return (

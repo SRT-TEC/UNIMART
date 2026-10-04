@@ -30,13 +30,13 @@ export default function OnboardingScreen() {
 
   const nextStep = () => {
     if (isLast) {
-      router.push("/login");
+      router.push("/login" as any);
     } else {
       setStep(step + 1);
     }
   };
 
-  const skip = () => router.push("/login");
+  const skip = () => router.push("/login" as any);
 
   return (
     <View style={styles.wrapper}>

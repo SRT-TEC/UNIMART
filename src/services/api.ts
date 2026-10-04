@@ -20,14 +20,17 @@ type UserRegistration = {
   password: string;
 };
 
-async function request<T>(path: string, body: object): Promise<T> {
+async function request<T>(path: string, body?: object): Promise<T> {
   let response: Response;
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(body),
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
     });
   } catch {
     throw new Error(`Cannot reach the UniMart API at ${API_BASE_URL}.`);
@@ -71,6 +74,18 @@ export function getAuthToken(): Promise<string | null> | string | null {
 
 export async function registerUser(user: UserRegistration): Promise<void> {
   await request("/api/v1/auth/register", user);
+}
+
+export async function verifyEmailToken(token: string): Promise<void> {
+  await request(
+    `/api/v1/auth/verify-email/link?token=${encodeURIComponent(token)}`,
+  );
+}
+
+export async function resendVerificationEmail(email: string): Promise<void> {
+  await request(
+    `/api/v1/auth/resend-verification?email=${encodeURIComponent(email)}&method=link`,
+  );
 }
 
 export async function loginUser(email: string, password: string): Promise<void> {

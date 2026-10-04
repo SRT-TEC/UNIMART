@@ -27,7 +27,7 @@ const menuItems = [
 export default function ProfileScreen() {
   const router = useRouter();
 
-  const logout = () => router.replace("/login");
+  const logout = () => router.replace("/login" as any);
 
   return (
     <ScrollView style={styles.wrapper} showsVerticalScrollIndicator={false}>

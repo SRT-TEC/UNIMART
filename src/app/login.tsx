@@ -44,7 +44,7 @@ export default function LoginScreen() {
     setIsSubmitting(true);
     try {
       await loginUser(email.trim().toLowerCase(), password);
-      router.replace("/(tabs)/feed");
+      router.replace("/(tabs)/feed" as any);
     } catch (error) {
       setRequestError(
         error instanceof Error ? error.message : "Unable to log in. Please try again.",
@@ -54,7 +54,7 @@ export default function LoginScreen() {
     }
   };
 
-  const goToSignup = () => router.push("/signup");
+  const goToSignup = () => router.push("/signup" as any);
 
   return (
     <KeyboardAvoidingView

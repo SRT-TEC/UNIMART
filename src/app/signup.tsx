@@ -11,7 +11,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { registerUser } from "../services/api";
+import { registerUser, resendVerificationEmail } from "../services/api";
 
 export default function SignupScreen() {
   const [firstName, setFirstName] = useState("");
@@ -31,6 +31,8 @@ export default function SignupScreen() {
   const [requestError, setRequestError] = useState("");
   const [registrationMessage, setRegistrationMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [canResendVerification, setCanResendVerification] = useState(false);
   const router = useRouter();
 
   const validate = () => {
@@ -61,6 +63,7 @@ export default function SignupScreen() {
 
     setRequestError("");
     setRegistrationMessage("");
+    setCanResendVerification(false);
     setIsSubmitting(true);
     try {
       await registerUser({
@@ -72,17 +75,39 @@ export default function SignupScreen() {
         "Account created. Verify your email before logging in.",
       );
     } catch (error) {
-      setRequestError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Unable to create your account. Please try again.",
+          : "Unable to create your account. Please try again.";
+      setRequestError(message);
+      setCanResendVerification(
+        message.includes("Account created, but the verification email could not be sent"),
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const goToLogin = () => router.push("/login");
+  const onResendVerification = async () => {
+    setRequestError("");
+    setRegistrationMessage("");
+    setIsResendingVerification(true);
+    try {
+      await resendVerificationEmail(email.trim().toLowerCase());
+      setCanResendVerification(false);
+      setRegistrationMessage("Verification email sent. Check your inbox.");
+    } catch (error) {
+      setRequestError(
+        error instanceof Error
+          ? error.message
+          : "Unable to resend the verification email. Please try again.",
+      );
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
+  const goToLogin = () => router.push("/login" as any);
 
   return (
     <KeyboardAvoidingView
@@ -216,6 +241,17 @@ export default function SignupScreen() {
           </Text>
 
           {requestError ? <Text style={styles.requestError}>{requestError}</Text> : null}
+          {canResendVerification ? (
+            <TouchableOpacity
+              style={styles.resendBtn}
+              onPress={onResendVerification}
+              disabled={isResendingVerification}
+            >
+              <Text style={styles.resendBtnText}>
+                {isResendingVerification ? "Sending..." : "Resend verification email"}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           {registrationMessage ? (
             <Text style={styles.registrationMessage}>{registrationMessage}</Text>
           ) : null}
@@ -267,6 +303,8 @@ const styles = StyleSheet.create({
   errText: { fontSize: 12, color: "#EF4444", marginTop: 4, marginLeft: 4 },
   requestError: { fontSize: 13, color: "#DC2626", marginBottom: 12, textAlign: "center" },
   registrationMessage: { fontSize: 13, color: "#15803D", marginBottom: 12, textAlign: "center" },
+  resendBtn: { alignItems: "center", paddingVertical: 10, marginBottom: 8 },
+  resendBtnText: { color: "#1B4FD8", fontSize: 14, fontWeight: "600" },
   passBox: {
     flexDirection: "row", alignItems: "center",
     borderWidth: 1, borderColor: "#E2E8F0",
