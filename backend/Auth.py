@@ -3,10 +3,10 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from collections import defaultdict
+from email.message import EmailMessage
+import logging
 import secrets
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import os
 
 from app.db.session import get_db
@@ -16,6 +16,7 @@ from app.core.security import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+logger = logging.getLogger(__name__)
 
 
 failed_attempts = defaultdict(list)
@@ -30,22 +31,29 @@ OTP_EXPIRY_MINUTES = 10
 VERIFICATION_TOKEN_EXPIRY_HOURS = 24
 
 
-GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
-GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD", "your-app-password")
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME)
+SMTP_USE_STARTTLS = os.getenv("SMTP_USE_STARTTLS", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+}
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8081").rstrip("/")
 
 def is_account_locked(email: str) -> bool:
     """Check if account is locked due to too many failed attempts."""
     now = datetime.utcnow()
     cutoff_time = now - timedelta(minutes=LOCKOUT_DURATION_MINUTES)
-    
-    
+
+
     failed_attempts[email] = [
         attempt_time for attempt_time in failed_attempts[email]
         if attempt_time > cutoff_time
     ]
-    
+
     return len(failed_attempts[email]) >= MAX_ATTEMPTS
 
 def record_failed_attempt(email: str):
@@ -57,25 +65,36 @@ def clear_failed_attempts(email: str):
     if email in failed_attempts:
         del failed_attempts[email]
 
-def send_email(recipient: str, subject: str, body: str, html_body: str = None):
-    """Send email via Gmail SMTP."""
+def send_email(recipient: str, subject: str, body: str, html_body: str = None) -> bool:
+    """Send email through the configured SMTP server."""
+    if not SMTP_HOST or not SMTP_FROM_EMAIL:
+        logger.error("Email delivery is not configured: set SMTP_HOST and SMTP_FROM_EMAIL.")
+        return False
+    if bool(SMTP_USERNAME) != bool(SMTP_PASSWORD):
+        logger.error("Email delivery requires both SMTP_USERNAME and SMTP_PASSWORD.")
+        return False
+    if SMTP_USERNAME and not SMTP_USE_STARTTLS:
+        logger.error("Authenticated email delivery requires SMTP_USE_STARTTLS=true.")
+        return False
+
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = SMTP_FROM_EMAIL
+    message["To"] = recipient
+    message.set_content(body)
+    if html_body:
+        message.add_alternative(html_body, subtype="html")
+
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = GMAIL_USER
-        msg["To"] = recipient
-        
-        msg.attach(MIMEText(body, "plain"))
-        if html_body:
-            msg.attach(MIMEText(html_body, "html"))
-        
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(GMAIL_USER, GMAIL_PASSWORD)
-            server.sendmail(GMAIL_USER, recipient, msg.as_string())
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+            if SMTP_USE_STARTTLS:
+                server.starttls()
+            if SMTP_USERNAME:
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(message)
         return True
-    except Exception as e:
-        print(f"Error sending email to {recipient}: {str(e)}")
+    except (OSError, smtplib.SMTPException):
+        logger.exception("Failed to send email through the configured SMTP server.")
         return False
 
 def generate_verification_token() -> str:
@@ -86,9 +105,9 @@ def generate_otp() -> str:
     """Generate a 6-digit OTP code."""
     return "".join([str(secrets.randbelow(10)) for _ in range(6)])
 
-def send_verification_email(email: str, token: str, frontend_url: str = "http://localhost:3000"):
+def send_verification_email(email: str, token: str):
     """Send verification link email."""
-    verification_link = f"{frontend_url}/verify-email?token={token}"
+    verification_link = f"{FRONTEND_URL}/verify-email?token={token}"
     subject = "Verify Your Email - UNIMART"
     body = f"Click the link below to verify your email:\n{verification_link}\n\nThis link expires in 24 hours."
     html_body = f"""
@@ -147,7 +166,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    
+
     # Generate and send verification token
     token = generate_verification_token()
     verification_tokens[token] = {
@@ -155,8 +174,16 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         "expires": datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRY_HOURS),
         "type": "link"
     }
-    send_verification_email(payload.email, token)
-    
+    if not send_verification_email(payload.email, token):
+        del verification_tokens[token]
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Account created, but the verification email could not be sent. "
+                "Check SMTP settings and request a new verification email."
+            ),
+        )
+
     return user
 
 @router.post("/login", response_model=TokenResponse)
@@ -168,7 +195,7 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Account locked due to too many failed attempts. Try again in {LOCKOUT_DURATION_MINUTES} minutes.",
         )
-    
+
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.hashed_password):
         record_failed_attempt(payload.email)
@@ -186,10 +213,10 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is deactivated",
         )
-    
+
     # Clear failed attempts on successful login
     clear_failed_attempts(payload.email)
-    
+
     token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": token, "token_type": "bearer"}
 
@@ -201,7 +228,7 @@ def verify_email_with_link(token: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification token",
         )
-    
+
     token_data = verification_tokens[token]
     if datetime.utcnow() > token_data["expires"]:
         del verification_tokens[token]
@@ -209,18 +236,18 @@ def verify_email_with_link(token: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Verification token expired",
         )
-    
+
     user = db.query(User).filter(User.email == token_data["email"]).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     user.is_verified = True
     db.commit()
     del verification_tokens[token]
-    
+
     return {"message": "Email verified successfully"}
 
 @router.post("/verify-email/otp-request")
@@ -232,23 +259,24 @@ def request_otp(email: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     if user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email is already verified",
         )
-    
+
     otp = generate_otp()
     otp_codes[email] = {
         "code": otp,
         "expires": datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES),
         "attempts": 0
     }
-    
+
     if send_otp_email(email, otp):
         return {"message": "OTP sent to your email"}
     else:
+        del otp_codes[email]
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to send OTP email",
@@ -262,41 +290,41 @@ def verify_otp(email: str, otp: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No OTP found for this email. Request a new OTP.",
         )
-    
+
     otp_data = otp_codes[email]
-    
+
     if datetime.utcnow() > otp_data["expires"]:
         del otp_codes[email]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP expired. Request a new OTP.",
         )
-    
+
     if otp_data["attempts"] >= MAX_OTP_ATTEMPTS:
         del otp_codes[email]
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many incorrect OTP attempts. Request a new OTP.",
         )
-    
+
     if otp_data["code"] != otp:
         otp_data["attempts"] += 1
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid OTP. Attempts remaining: {MAX_OTP_ATTEMPTS - otp_data['attempts']}",
         )
-    
+
     user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     user.is_verified = True
     db.commit()
     del otp_codes[email]
-    
+
     return {"message": "Email verified successfully"}
 
 @router.post("/resend-verification")
@@ -308,13 +336,13 @@ def resend_verification(email: str, method: str = "link", db: Session = Depends(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     if user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email is already verified",
         )
-    
+
     if method == "link":
         token = generate_verification_token()
         verification_tokens[token] = {
@@ -325,6 +353,7 @@ def resend_verification(email: str, method: str = "link", db: Session = Depends(
         if send_verification_email(email, token):
             return {"message": "Verification link sent"}
         else:
+            del verification_tokens[token]
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to send verification email",
@@ -339,6 +368,7 @@ def resend_verification(email: str, method: str = "link", db: Session = Depends(
         if send_otp_email(email, otp):
             return {"message": "OTP sent to your email"}
         else:
+            del otp_codes[email]
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to send OTP email",

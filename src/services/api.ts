@@ -6,7 +6,7 @@ const tokenKey = "unimart_access_token";
 const expoHost = Constants.expoConfig?.hostUri?.split(":")[0] ?? "127.0.0.1";
 
 export const API_BASE_URL = (
-  process.env.EXPO_PUBLIC_API_URL ?? `http://${expoHost}:8000`
+  process.env.EXPO_PUBLIC_API_URL ?? `http://${expoHost}:8080`
 ).replace(/\/+$/, "");
 
 type TokenResponse = {

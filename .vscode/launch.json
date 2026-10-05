@@ -10,7 +10,7 @@
         "main:app",
         "--reload"
       ],
-      "cwd": "${workspaceFolder}/backend/UNIMART"
+      "cwd": "${workspaceFolder}/Backend"
     }
   ]
 }

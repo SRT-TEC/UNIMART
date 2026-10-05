@@ -23,30 +23,30 @@ def create_review(
         Transaction.id == review_data.transaction_id,
         Transaction.status == TransactionStatus.COMPLETED
     ).first()
-    
+
     if not transaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Transaction not found or not completed",
         )
-    
+
     if transaction.buyer_id != current_user.id and transaction.seller_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only review transactions you were part of",
         )
-    
+
     existing_review = db.query(Review).filter(
         Review.transaction_id == review_data.transaction_id,
         Review.reviewer_id == current_user.id
     ).first()
-    
+
     if existing_review:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You have already reviewed this transaction",
         )
-    
+
     review = Review(
         transaction_id=review_data.transaction_id,
         reviewer_id=current_user.id,
@@ -81,7 +81,7 @@ def get_seller_rating(
     reviews = db.query(Review).filter(
         Review.reviewee_id == user_id
     ).all()
-    
+
     if not reviews:
         return SellerRatingSummary(
             user_id=user_id,
@@ -89,12 +89,12 @@ def get_seller_rating(
             total_reviews=0,
             rating_distribution={}
         )
-    
+
     ratings = [r.rating for r in reviews]
     average_rating = sum(ratings) / len(ratings)
-    
+
     rating_distribution = {i: sum(1 for r in ratings if r == i) for i in range(1, 6)}
-    
+
     return SellerRatingSummary(
         user_id=user_id,
         average_rating=average_rating,

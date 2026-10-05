@@ -2,11 +2,16 @@ import logging
 import os
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 from Auth import router as auth_router
 from review import router as review_router
